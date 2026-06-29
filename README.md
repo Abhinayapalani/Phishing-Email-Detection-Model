@@ -1,1 +1,1 @@
-# Phishing-Email-Detection-Model
+# Phishing-Email-Detection

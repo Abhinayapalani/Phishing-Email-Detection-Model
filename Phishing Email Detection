@@ -1,0 +1,97 @@
+import pandas as pd
+
+data = pd.DataFrame({
+    "text": [
+        "Dear customer, verify your account immediately using https://secure-bank-login.com",
+        "You have won a free iPhone! Click here now.",
+        "Meeting has been scheduled for tomorrow at 3 PM.",
+        "Project report has been approved.",
+        "Your password has expired. Login to continue.",
+        "Happy Birthday! Have a wonderful day.",
+        "Update your payment details immediately.",
+        "Lunch with the team at 1 PM today."
+    ],
+    "label": [
+        "phishing",
+        "phishing",
+        "safe",
+        "safe",
+        "phishing",
+        "safe",
+        "phishing",
+        "safe"
+    ]
+})
+
+print(data)
+
+#dataset has loaded
+                                                text     label
+0  Dear customer, verify your account immediately...  phishing
+1        You have won a free iPhone! Click here now.  phishing
+2   Meeting has been scheduled for tomorrow at 3 PM.      safe
+3                  Project report has been approved.      safe
+4      Your password has expired. Login to continue.  phishing
+5              Happy Birthday! Have a wonderful day.      safe
+6           Update your payment details immediately.  phishing
+7                 Lunch with the team at 1 PM today.      safe
+#data is ready
+
+#python 
+import re
+from sklearn.model_selection import train_test_split
+from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.ensemble import ExtraTreesClassifier
+from sklearn.metrics import accuracy_score, confusion_matrix, classification_report
+
+# Suspicious keywords
+keywords = ["verify","login","password","urgent","bank",
+            "account","winner","reward","click","free","payment","update"]
+
+# Feature extraction
+def extract_features(text):
+    text = text.lower()
+    return [
+        len(re.findall(r'https?://|www\.', text)),  # URLs
+        sum(c.isdigit() for c in text),             # Digits
+        text.count("!"),                            # Exclamation marks
+        sum(word in text for word in keywords)      # Keyword count
+    ]
+
+# Create extra features
+extra = data["text"].apply(extract_features)
+
+import pandas as pd
+extra = pd.DataFrame(extra.tolist(),
+                     columns=["URLs","Digits","Exclamation","Keywords"])
+
+# TF-IDF
+vectorizer = TfidfVectorizer(stop_words="english")
+tfidf = vectorizer.fit_transform(data["text"])
+
+tfidf_df = pd.DataFrame(
+    tfidf.toarray(),
+    columns=vectorizer.get_feature_names_out()
+)
+
+# Combine features
+X = pd.concat([tfidf_df, extra], axis=1)
+y = data["label"]
+
+# Train/Test split
+X_train, X_test, y_train, y_test = train_test_split(
+    X, y, test_size=0.25, random_state=42
+)
+
+# Train model
+model = ExtraTreesClassifier(random_state=42)
+model.fit(X_train, y_train)
+
+# Prediction
+pred = model.predict(X_test)
+
+print("Accuracy:", accuracy_score(y_test, pred))
+print("\nClassification Report")
+print(classification_report(y_test, pred))
+print("\nConfusion Matrix")
+print(confusion_matrix(y_test, pred))
